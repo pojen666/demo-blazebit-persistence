@@ -82,9 +82,10 @@ public class UserServiceTest {
 
     @DisplayName("測試查詢用單位編號查詢該單位下所有簡易使用者+單位資訊")
     @Test
-    void findAllSimpleUserWithDepartment() {
+    void findAllSimpleUserWithDepartmentNo() {
         prepareData();
-        List<SimpleUserWithDepartment> target = userService.findAllSimpleUserWithDepartment(departmentNo);
+        List<SimpleUserWithDepartment> target = userService.findAllSimpleUserWithDepartmentNo(departmentNo);
         assertThat(target).isNotEmpty();
     }
+
 }

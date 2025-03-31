@@ -1,13 +1,12 @@
 package com.demo.service;
 
-import com.blazebit.persistence.CriteriaBuilder;
 import com.blazebit.persistence.CriteriaBuilderFactory;
+import com.blazebit.persistence.SelectBaseCTECriteriaBuilder;
 import com.demo.domain.Department;
 import com.demo.domain.User;
 import com.demo.dto.FullUserWithDepartment;
 import com.demo.dto.SimpleUserWithDepartment;
 import com.demo.repository.UserRepository;
-import jakarta.persistence.Tuple;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,53 +22,50 @@ public class UserService {
         this.cbf = cbf;
     }
 
-    // 把使用者跟單位join起來的builder
-    public CriteriaBuilder<Tuple> getSimpleUserWithDepartmentCriteriaBuilder() {
-        return cbf.create(userRepository.getEntityManager(), Tuple.class)
-                .from(User.class, "u")
-                .select("u.no", "empNo")
-                .select("u.name", "name")
-                .select("d.no", "departmentNo")
-                .select("d.name", "departmentName")
+    // 把使用者跟單位join起來的設定
+    public <B extends SelectBaseCTECriteriaBuilder<?>> void buildGetSimpleUserWithDepartmentSQL(B cb) {
+        cb.from(User.class, "u")
+                .bind("empNo").select("u.no")
+                .bind("name").select("u.name")
+                .bind("departmentNo").select("d.no")
+                .bind("departmentName").select("d.name")
                 .innerJoinOnEntitySubquery(Department.class, "d")
                 .end()
                 .on("u.departmentNo").eqExpression("d.no")
                 .end();
     }
 
-    // 使用員工編號查詢
-    public CriteriaBuilder<Tuple> getSimpleUserWithDepartmentByEmpNoCriteriaBuilder(String empNo) {
-        return getSimpleUserWithDepartmentCriteriaBuilder().where("u.no").eq(empNo);
-    }
-
     // 使用單位代碼查詢簡易使用者+單位資訊
-    public List<SimpleUserWithDepartment> findAllSimpleUserWithDepartment(String departmentNo) {
-        return getSimpleUserWithDepartmentCriteriaBuilder()
+    public List<SimpleUserWithDepartment> findAllSimpleUserWithDepartmentNo(String departmentNo) {
+        var cb = cbf.create(userRepository.getEntityManager(), SimpleUserWithDepartment.class)
+                .with(SimpleUserWithDepartment.class);
+        buildGetSimpleUserWithDepartmentSQL(cb);
+        return cb
                 .where("d.no").eq(departmentNo)
+                .end()
                 .getResultStream()
-                .map(tuple -> new SimpleUserWithDepartment().of(tuple))
                 .toList();
     }
 
     // 使用員工編號查詢簡易使用者+單位資訊
     public SimpleUserWithDepartment findSimpleUserWithDepartmentByEmpNo(String empNo) {
-        return getSimpleUserWithDepartmentByEmpNoCriteriaBuilder(empNo)
-                .getResultStream()
-                .findFirst()
-                .map(tuple -> new SimpleUserWithDepartment().of(tuple))
-                .orElse(null);
+        var cb = cbf.create(userRepository.getEntityManager(), SimpleUserWithDepartment.class)
+                .with(SimpleUserWithDepartment.class);
+        buildGetSimpleUserWithDepartmentSQL(cb);
+        return cb.where("u.no").eq(empNo).end().getSingleResult();
     }
 
     // 使用員工編號查詢完整使用者+單位資訊
     public FullUserWithDepartment findFullUserWithDepartmentByEmpNo(String empNo) {
-        return getSimpleUserWithDepartmentByEmpNoCriteriaBuilder(empNo)
-                .select("u.email", "email")
-                .select("u.phone", "phone")
-                .select("u.active", "active")
-                .getResultStream()
-                .findFirst()
-                .map(tuple -> new FullUserWithDepartment().of(tuple))
-                .orElse(null);
+        var cb = cbf.create(userRepository.getEntityManager(), FullUserWithDepartment.class)
+                .with(FullUserWithDepartment.class);
+        buildGetSimpleUserWithDepartmentSQL(cb);
+        return cb.where("u.no").eq(empNo)
+                .bind("email").select("u.email")
+                .bind("phone").select("u.phone")
+                .bind("active").select("u.active")
+                .end()
+                .getSingleResult();
     }
 
 }

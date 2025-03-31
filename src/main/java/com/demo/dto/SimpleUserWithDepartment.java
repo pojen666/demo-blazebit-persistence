@@ -1,13 +1,19 @@
 package com.demo.dto;
 
+import com.blazebit.persistence.CTE;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Tuple;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
 @Data
+@CTE
+@Entity
 @Accessors(chain = true)
 public class SimpleUserWithDepartment {
 
+    @Id
     private String empNo;
 
     private String name;
